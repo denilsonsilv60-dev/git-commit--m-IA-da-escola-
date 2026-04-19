@@ -1,10 +1,7 @@
-// moderation/index.js
-
 const { analyzeText } = require("./text");
-// const { decidePost, decideComment } = require("./decision"); // Removed
 const { getUserById, blockUser, isBlocked } = require("../../models/userModel");
 
-// Placeholder para notificação da diretoria
+// Notificação da diretoria
 function notifyDirector(director, message) {
   console.log(`Notificação para ${director.nome}: ${message}`);
 }
@@ -12,7 +9,14 @@ function notifyDirector(director, message) {
 async function moderateContent(content) {
   const user = content.user;
 
-  // 4. Antes de postar/comentar: Verificar bloqueio
+  if (!user || !content.text) {
+    return {
+      action: "bloquear",
+      message: "Conteúdo inválido."
+    };
+  }
+
+  // Verificar bloqueio
   if (isBlocked(user)) {
     return {
       action: "bloquear",
@@ -22,7 +26,6 @@ async function moderateContent(content) {
 
   const result = analyzeText(content.text);
 
-  // IA SEMPRE roda
   let action = "aprovar";
 
   // regras por role
@@ -31,13 +34,15 @@ async function moderateContent(content) {
   } else if (user.role === "professor") {
     action = result.score >= 12 ? "bloquear" : "aprovar";
   } else if (user.role === "diretoria") {
-    action = "aprovar"; // mas mantém logs
+    action = "aprovar";
   }
 
-  // 5. Aplicar punição: Bloquear usuário se a ação for "bloquear"
+  // punição
   if (action === "bloquear") {
     blockUser(user);
-    const director = getUserById("2"); // Assumindo que a diretora tem ID '2'
+
+    const director = getUserById("2");
+
     if (director) {
       notifyDirector(
         director,
@@ -47,9 +52,10 @@ async function moderateContent(content) {
   }
 
   return {
-    ...result,
+    score: result.score,
+    flags: result.flags,
     action,
-    monitored: user.role === "diretoria" ? true : false // Only monitored for diretoria as per original comment
+    monitored: user.role === "diretoria"
   };
 }
 
