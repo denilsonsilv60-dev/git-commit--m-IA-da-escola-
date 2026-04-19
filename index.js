@@ -1,10 +1,7 @@
-// moderation/index.js
+const { analyzeText } = require("./text.js");
+const { getUserById, blockUser, isBlocked } = require("../models/userModel");
 
-const { analyzeText } = require("./text");
-// const { decidePost, decideComment } = require("./decision"); // Removed
-const { getUserById, blockUser, isBlocked } = require("../../models/userModel");
-
-// Placeholder para notificação da diretoria
+// Notificação da diretoria (placeholder)
 function notifyDirector(director, message) {
   console.log(`Notificação para ${director.nome}: ${message}`);
 }
@@ -12,7 +9,7 @@ function notifyDirector(director, message) {
 async function moderateContent(content) {
   const user = content.user;
 
-  // 4. Antes de postar/comentar: Verificar bloqueio
+  // 🔒 Verificar bloqueio antes de tudo
   if (isBlocked(user)) {
     return {
       action: "bloquear",
@@ -22,22 +19,24 @@ async function moderateContent(content) {
 
   const result = analyzeText(content.text);
 
-  // IA SEMPRE roda
   let action = "aprovar";
 
-  // regras por role
+  // 📌 Regras por função
   if (user.role === "aluno") {
     action = result.score >= 10 ? "bloquear" : "aprovar";
-  } else if (user.role === "professor") {
+  } 
+  else if (user.role === "professor") {
     action = result.score >= 12 ? "bloquear" : "aprovar";
-  } else if (user.role === "diretoria") {
-    action = "aprovar"; // mas mantém logs
+  } 
+  else if (user.role === "diretoria") {
+    action = "aprovar"; // só monitora
   }
 
-  // 5. Aplicar punição: Bloquear usuário se a ação for "bloquear"
+  // 🚨 Bloqueio automático
   if (action === "bloquear") {
     blockUser(user);
-    const director = getUserById("2"); // Assumindo que a diretora tem ID '2'
+
+    const director = getUserById("2"); // ID da diretora
     if (director) {
       notifyDirector(
         director,
@@ -49,7 +48,7 @@ async function moderateContent(content) {
   return {
     ...result,
     action,
-    monitored: user.role === "diretoria" ? true : false // Only monitored for diretoria as per original comment
+    monitored: user.role === "diretoria"
   };
 }
 
