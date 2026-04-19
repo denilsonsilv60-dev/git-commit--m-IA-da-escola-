@@ -1,4 +1,4 @@
-const express = require("express");
+const express = require("./moderation/text")
 const app = express();
 
 app.use(express.json());
