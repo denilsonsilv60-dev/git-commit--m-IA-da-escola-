@@ -1,4 +1,3 @@
-
 // 🔥 Categorias principais
 const categories = {
   leve: [
@@ -16,90 +15,79 @@ const categories = {
   ]
 };
 
-// 🔥 Gírias ofensivas (pesadas)
-const slangs = [
+// 🔥 Gírias ofensivas
+const slangs = new Set([
   "fdp","vsf","tmnc","pqp","krl","caralho","porra",
   "foder","vai se foder","seu fdp"
-];
+]);
 
-// 🔥 Substituições pra burlar
+// 🔥 Substituições (anti-bypass)
 const replacements = {
   "1": "i", "0": "o", "@": "a", "3": "e",
   "$": "s", "!": "i", "4": "a", "7": "t"
 };
 
-// 🔥 Normalização pesada
-function normalizeText(text) {
-  let normalized = text.toLowerCase();
+// 🔥 Normalização (robusta)
+function normalizeText(text = "") {
+  let t = String(text).toLowerCase();
 
-  // remove acentos
-  normalized = normalized.normalize("NFD").replace(/[-\u0300-\u036f]/g, "");
+  // remove acentos corretamente
+  t = t.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-  // substitui números/símbolos
-  Object.keys(replacements).forEach(char => {
-    const regex = new RegExp(char, "g");
-    normalized = normalized.replace(regex, replacements[char]);
-  });
+  // substituições anti-bypass
+  for (const [k, v] of Object.entries(replacements)) {
+    t = t.split(k).join(v);
+  }
 
-  // remove símbolos estranhos
-  normalized = normalized.replace(/[^a-z0-9\s]/g, " ");
+  // remove símbolos
+  t = t.replace(/[^a-z0-9\s]/g, " ");
 
   // limpa espaços
-  normalized = normalized.replace(/\s+/g, " ").trim();
-
-  return normalized;
+  return t.replace(/\s+/g, " ").trim();
 }
 
 // 🔥 Tokenização
 function tokenize(text) {
-  return text.split(" ");
+  return text.length ? text.split(" ") : [];
 }
 
-// 🔥 Bullying
+// 🔥 Bullying patterns
 function detectBullying(text) {
   const patterns = [
-    "voce e",
-    "vc e",
-    "tu e",
+    "voce e","vc e","tu e",
     "ninguem gosta de voce",
-    "vai se matar",
-    "se matar",
-    "te odeio",
-    "ninguem te quer"
+    "vai se matar","se matar",
+    "te odeio","ninguem te quer"
   ];
 
   return patterns.some(p => text.includes(p));
 }
 
-// 🔥 Spam (repetição)
+// 🔥 Spam detector
 function detectSpam(words) {
-  let count = {};
+  const count = {};
   let score = 0;
 
-  for (let w of words) {
+  for (const w of words) {
     count[w] = (count[w] || 0) + 1;
+    if (count[w] === 3) score += 2; // só conta uma vez
   }
-
-  Object.values(count).forEach(qtd => {
-    if (qtd >= 3) score += 2;
-  });
 
   return score;
 }
 
-// 🚀 FUNÇÃO PRINCIPAL
+// 🚀 IA PRINCIPAL
 function analyzeText(text) {
   let score = 0;
-  let flags = [];
+  const flags = [];
+  const detected = new Set();
 
   const normalized = normalizeText(text);
   const words = tokenize(normalized);
 
-  let detected = new Set();
-
-  // 🔹 Detectar palavras
-  for (let word of words) {
-    for (let [level, list] of Object.entries(categories)) {
+  // 🔹 palavras comuns
+  for (const word of words) {
+    for (const [level, list] of Object.entries(categories)) {
       if (list.includes(word) && !detected.has(word)) {
         detected.add(word);
 
@@ -112,24 +100,6 @@ function analyzeText(text) {
     }
   }
 
-  // 🔹 Detectar gírias
-  slangs.forEach(slang => {
-    if (normalized.includes(slang)) {
-      score += 6;
-      flags.push(`giria grave: ${slang}`);
-    }
-  });
-
-  // 🔹 Bullying
-  if (detectBullying(normalized)) {
-    score += 3;
-    flags.push("bullying");
-  }
-
-  // 🔹 Spam ofensivo
-  score += detectSpam(words);
-
-  return { score, flags };
-}
-
-module.exports = { analyzeText };
+  // 🔹 gírias ofensivas
+  for (const slang of slangs) {
+    if (normalized
